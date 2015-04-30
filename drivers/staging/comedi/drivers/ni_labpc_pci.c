@@ -17,7 +17,7 @@
 /*
  * Driver: ni_labpc_pci
  * Description: National Instruments Lab-PC PCI-1200
- * Devices: (National Instruments) PCI-1200 [ni_pci-1200]
+ * Devices: [National Instruments] PCI-1200 (ni_pci-1200)
  * Author: Frank Mori Hess <fmhess@users.sourceforge.net>
  * Status: works
  *
@@ -79,7 +79,6 @@ static int labpc_pci_auto_attach(struct comedi_device *dev,
 {
 	struct pci_dev *pcidev = comedi_to_pci_dev(dev);
 	const struct labpc_boardinfo *board = NULL;
-	struct labpc_private *devpriv;
 	int ret;
 
 	if (context < ARRAY_SIZE(labpc_pci_boards))
@@ -101,27 +100,14 @@ static int labpc_pci_auto_attach(struct comedi_device *dev,
 	if (!dev->mmio)
 		return -ENOMEM;
 
-	devpriv = comedi_alloc_devpriv(dev, sizeof(*devpriv));
-	if (!devpriv)
-		return -ENOMEM;
-
 	return labpc_common_attach(dev, pcidev->irq, IRQF_SHARED);
-}
-
-static void labpc_pci_detach(struct comedi_device *dev)
-{
-	if (dev->mmio)
-		iounmap(dev->mmio);
-	if (dev->irq)
-		free_irq(dev->irq, dev);
-	comedi_pci_disable(dev);
 }
 
 static struct comedi_driver labpc_pci_comedi_driver = {
 	.driver_name	= "labpc_pci",
 	.module		= THIS_MODULE,
 	.auto_attach	= labpc_pci_auto_attach,
-	.detach		= labpc_pci_detach,
+	.detach		= comedi_pci_detach,
 };
 
 static const struct pci_device_id labpc_pci_table[] = {

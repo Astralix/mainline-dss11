@@ -586,6 +586,12 @@ int ccc_lock_enqueue(const struct lu_env *env,
 	return 0;
 }
 
+int ccc_lock_use(const struct lu_env *env, const struct cl_lock_slice *slice)
+{
+	CLOBINVRNT(env, slice->cls_obj, ccc_object_invariant(slice->cls_obj));
+	return 0;
+}
+
 int ccc_lock_unuse(const struct lu_env *env, const struct cl_lock_slice *slice)
 {
 	CLOBINVRNT(env, slice->cls_obj, ccc_object_invariant(slice->cls_obj));
@@ -895,11 +901,11 @@ void ccc_req_completion(const struct lu_env *env,
 void ccc_req_attr_set(const struct lu_env *env,
 		      const struct cl_req_slice *slice,
 		      const struct cl_object *obj,
-		      struct cl_req_attr *attr, obd_valid flags)
+		      struct cl_req_attr *attr, u64 flags)
 {
 	struct inode *inode;
 	struct obdo  *oa;
-	obd_flag      valid_flags;
+	u32	      valid_flags;
 
 	oa = attr->cra_oa;
 	inode = ccc_object_inode(obj);

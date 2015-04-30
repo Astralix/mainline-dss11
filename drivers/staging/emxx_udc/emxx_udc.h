@@ -437,10 +437,6 @@
 #define PLL_RESUME			BIT05		/* RW */
 #define PLL_LOCK			BIT04		/* R */
 
-#ifdef CONFIG_MACH_EMGR
-#define PLL_RST				BIT02		/* RW */
-#endif
-
 #define EPC_RST				BIT00		/* RW */
 
 /*------- (0x1014) USBF_EPTEST Register */
@@ -628,7 +624,6 @@ struct nbu2ss_udc {
 	unsigned		linux_suspended:1;
 	unsigned		linux_resume:1;
 	unsigned		usb_suspended:1;
-	unsigned		self_powered:1;
 	unsigned		remote_wakeup:1;
 	unsigned		udc_enabled:1;
 

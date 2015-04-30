@@ -16,29 +16,28 @@
 */
 
 /*
-Driver: ni_tiocmd
-Description: National Instruments general purpose counters command support
-Devices:
-Author: J.P. Mellor <jpmellor@rose-hulman.edu>,
-	Herman.Bruyninckx@mech.kuleuven.ac.be,
-	Wim.Meeussen@mech.kuleuven.ac.be,
-	Klaas.Gadeyne@mech.kuleuven.ac.be,
-	Frank Mori Hess <fmhess@users.sourceforge.net>
-Updated: Fri, 11 Apr 2008 12:32:35 +0100
-Status: works
+ * Module: ni_tiocmd
+ * Description: National Instruments general purpose counters command support
+ * Author: J.P. Mellor <jpmellor@rose-hulman.edu>,
+ *         Herman.Bruyninckx@mech.kuleuven.ac.be,
+ *         Wim.Meeussen@mech.kuleuven.ac.be,
+ *         Klaas.Gadeyne@mech.kuleuven.ac.be,
+ *         Frank Mori Hess <fmhess@users.sourceforge.net>
+ * Updated: Fri, 11 Apr 2008 12:32:35 +0100
+ * Status: works
+ *
+ * This module is not used directly by end-users.  Rather, it
+ * is used by other drivers (for example ni_660x and ni_pcimio)
+ * to provide command support for NI's general purpose counters.
+ * It was originally split out of ni_tio.c to stop the 'ni_tio'
+ * module depending on the 'mite' module.
+ *
+ * References:
+ * DAQ 660x Register-Level Programmer Manual  (NI 370505A-01)
+ * DAQ 6601/6602 User Manual (NI 322137B-01)
+ * 340934b.pdf  DAQ-STC reference manual
+ */
 
-This module is not used directly by end-users.  Rather, it
-is used by other drivers (for example ni_660x and ni_pcimio)
-to provide command support for NI's general purpose counters.
-It was originally split out of ni_tio.c to stop the 'ni_tio'
-module depending on the 'mite' module.
-
-References:
-DAQ 660x Register-Level Programmer Manual  (NI 370505A-01)
-DAQ 6601/6602 User Manual (NI 322137B-01)
-340934b.pdf  DAQ-STC reference manual
-
-*/
 /*
 TODO:
 	Support use of both banks X and Y
@@ -185,7 +184,7 @@ static int ni_tio_cmd_setup(struct comedi_subdevice *s)
 	}
 	if (set_gate_source)
 		retval = ni_tio_set_gate_src(counter, 0, gate_source);
-	if (cmd->flags & TRIG_WAKE_EOS) {
+	if (cmd->flags & CMDF_WAKE_EOS) {
 		ni_tio_set_bits(counter, NITIO_INT_ENA_REG(cidx),
 				GI_GATE_INTERRUPT_ENABLE(cidx),
 				GI_GATE_INTERRUPT_ENABLE(cidx));
@@ -286,10 +285,9 @@ int ni_tio_cmdtest(struct comedi_device *dev,
 	if (err)
 		return 3;
 
-	/* step 4: fix up any arguments */
+	/* Step 4: fix up any arguments */
 
-	if (err)
-		return 4;
+	/* Step 5: check channel list if it exists */
 
 	return 0;
 }
@@ -372,9 +370,8 @@ static void ni_tio_acknowledge_and_confirm(struct ni_gpct *counter,
 			  of gate interrupt via dma read/write
 			   and report bogus gate errors */
 			if (counter->counter_dev->variant !=
-			    ni_gpct_variant_660x) {
+			    ni_gpct_variant_660x)
 				*gate_error = 1;
-			}
 		}
 	}
 	if (gxx_status & GI_TC_ERROR(cidx)) {
@@ -451,11 +448,10 @@ void ni_tio_handle_interrupt(struct ni_gpct *counter,
 		return;
 	}
 	gpct_mite_status = mite_get_status(counter->mite_chan);
-	if (gpct_mite_status & CHSR_LINKC) {
+	if (gpct_mite_status & CHSR_LINKC)
 		writel(CHOR_CLRLC,
 		       counter->mite_chan->mite->mite_io_addr +
 		       MITE_CHOR(counter->mite_chan->channel));
-	}
 	mite_sync_input_dma(counter->mite_chan, s);
 	spin_unlock_irqrestore(&counter->lock, flags);
 }

@@ -15,9 +15,11 @@
 #include <linux/vmalloc.h>
 #include <linux/fs.h>
 #include <linux/bootmem.h>
+#include <asm/fpu.h>
 #include <asm/page.h>
 #include <asm/cacheflush.h>
 #include <asm/mmu_context.h>
+#include <asm/pgtable.h>
 
 #include <linux/kvm_host.h>
 
@@ -47,6 +49,7 @@ struct kvm_stats_debugfs_item debugfs_entries[] = {
 	{ "resvd_inst",	  VCPU_STAT(resvd_inst_exits),	 KVM_STAT_VCPU },
 	{ "break_inst",	  VCPU_STAT(break_inst_exits),	 KVM_STAT_VCPU },
 	{ "flush_dcache", VCPU_STAT(flush_dcache_exits), KVM_STAT_VCPU },
+	{ "halt_successful_poll", VCPU_STAT(halt_successful_poll), KVM_STAT_VCPU },
 	{ "halt_wakeup",  VCPU_STAT(halt_wakeup),	 KVM_STAT_VCPU },
 	{NULL}
 };
@@ -77,22 +80,14 @@ int kvm_arch_vcpu_should_kick(struct kvm_vcpu *vcpu)
 	return 1;
 }
 
-int kvm_arch_hardware_enable(void *garbage)
+int kvm_arch_hardware_enable(void)
 {
 	return 0;
-}
-
-void kvm_arch_hardware_disable(void *garbage)
-{
 }
 
 int kvm_arch_hardware_setup(void)
 {
 	return 0;
-}
-
-void kvm_arch_hardware_unsetup(void)
-{
 }
 
 void kvm_arch_check_processor_compat(void *rtn)
@@ -163,10 +158,6 @@ void kvm_mips_free_vcpus(struct kvm *kvm)
 	mutex_unlock(&kvm->lock);
 }
 
-void kvm_arch_sync_events(struct kvm *kvm)
-{
-}
-
 static void kvm_mips_uninit_tlbs(void *arg)
 {
 	/* Restore wired count */
@@ -194,19 +185,10 @@ long kvm_arch_dev_ioctl(struct file *filp, unsigned int ioctl,
 	return -ENOIOCTLCMD;
 }
 
-void kvm_arch_free_memslot(struct kvm *kvm, struct kvm_memory_slot *free,
-			   struct kvm_memory_slot *dont)
-{
-}
-
 int kvm_arch_create_memslot(struct kvm *kvm, struct kvm_memory_slot *slot,
 			    unsigned long npages)
 {
 	return 0;
-}
-
-void kvm_arch_memslots_updated(struct kvm *kvm)
-{
 }
 
 int kvm_arch_prepare_memory_region(struct kvm *kvm,
@@ -252,19 +234,6 @@ void kvm_arch_commit_memory_region(struct kvm *kvm,
 				kvm->arch.guest_pmap[i] = KVM_INVALID_PAGE;
 		}
 	}
-}
-
-void kvm_arch_flush_shadow_all(struct kvm *kvm)
-{
-}
-
-void kvm_arch_flush_shadow_memslot(struct kvm *kvm,
-				   struct kvm_memory_slot *slot)
-{
-}
-
-void kvm_arch_flush_shadow(struct kvm *kvm)
-{
 }
 
 struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
@@ -412,6 +381,8 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		vcpu->mmio_needed = 0;
 	}
 
+	lose_fpu(1);
+
 	local_irq_disable();
 	/* Check if we have any exceptions/interrupts pending */
 	kvm_mips_deliver_interrupts(vcpu,
@@ -419,7 +390,13 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 
 	kvm_guest_enter();
 
+	/* Disable hardware page table walking while in guest */
+	htw_stop();
+
 	r = __kvm_mips_vcpu_run(run, vcpu);
+
+	/* Re-enable HTW before enabling interrupts */
+	htw_start();
 
 	kvm_guest_exit();
 	local_irq_enable();
@@ -866,9 +843,8 @@ int kvm_arch_vcpu_ioctl_set_sregs(struct kvm_vcpu *vcpu,
 	return -ENOIOCTLCMD;
 }
 
-int kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
+void kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
 {
-	return 0;
 }
 
 int kvm_arch_vcpu_ioctl_get_fpu(struct kvm_vcpu *vcpu, struct kvm_fpu *fpu)
@@ -998,10 +974,6 @@ int kvm_arch_vcpu_init(struct kvm_vcpu *vcpu)
 	return 0;
 }
 
-void kvm_arch_vcpu_uninit(struct kvm_vcpu *vcpu)
-{
-}
-
 int kvm_arch_vcpu_ioctl_translate(struct kvm_vcpu *vcpu,
 				  struct kvm_translation *tr)
 {
@@ -1017,9 +989,6 @@ int kvm_arch_vcpu_setup(struct kvm_vcpu *vcpu)
 static void kvm_mips_set_c0_status(void)
 {
 	uint32_t status = read_c0_status();
-
-	if (cpu_has_fpu)
-		status |= (ST0_CU1);
 
 	if (cpu_has_dsp)
 		status |= (ST0_MX);
@@ -1039,6 +1008,9 @@ int kvm_mips_handle_exit(struct kvm_run *run, struct kvm_vcpu *vcpu)
 	unsigned long badvaddr = vcpu->arch.host_cp0_badvaddr;
 	enum emulation_result er = EMULATE_DONE;
 	int ret = RESUME_GUEST;
+
+	/* re-enable HTW before enabling interrupts */
+	htw_start();
 
 	/* Set a default exit reason */
 	run->exit_reason = KVM_EXIT_UNKNOWN;
@@ -1173,6 +1145,9 @@ skip_emul:
 			trace_kvm_exit(vcpu, SIGNAL_EXITS);
 		}
 	}
+
+	/* Disable HTW before returning to guest or host */
+	htw_stop();
 
 	return ret;
 }

@@ -131,7 +131,7 @@ static s32 hmc5843_set_mode(struct hmc5843_data *data, u8 operating_mode)
 static int hmc5843_wait_measurement(struct hmc5843_data *data)
 {
 	int tries = 150;
-	int val;
+	unsigned int val;
 	int ret;
 
 	while (tries-- > 0) {
@@ -209,7 +209,7 @@ static ssize_t hmc5843_show_measurement_configuration(struct device *dev,
 						char *buf)
 {
 	struct hmc5843_data *data = iio_priv(dev_to_iio_dev(dev));
-	int val;
+	unsigned int val;
 	int ret;
 
 	ret = regmap_read(data->regmap, HMC5843_CONFIG_REG_A, &val);
@@ -344,7 +344,7 @@ static int hmc5843_read_raw(struct iio_dev *indio_dev,
 			    int *val, int *val2, long mask)
 {
 	struct hmc5843_data *data = iio_priv(indio_dev);
-	int rval;
+	unsigned int rval;
 	int ret;
 
 	switch (mask) {
@@ -592,6 +592,7 @@ int hmc5843_common_probe(struct device *dev, struct regmap *regmap,
 	mutex_init(&data->lock);
 
 	indio_dev->dev.parent = dev;
+	indio_dev->name = dev->driver->name;
 	indio_dev->info = &hmc5843_info;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = data->variant->channels;

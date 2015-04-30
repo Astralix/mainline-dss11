@@ -300,7 +300,6 @@ static int ni_atmio_attach(struct comedi_device *dev,
 			   struct comedi_devconfig *it)
 {
 	const struct ni_board_struct *boardtype;
-	struct ni_private *devpriv;
 	struct pnp_dev *isapnp_dev;
 	int ret;
 	unsigned long iobase;
@@ -310,7 +309,6 @@ static int ni_atmio_attach(struct comedi_device *dev,
 	ret = ni_alloc_private(dev);
 	if (ret)
 		return ret;
-	devpriv = dev->private;
 
 	iobase = it->options[0];
 	irq = it->options[1];
@@ -336,7 +334,7 @@ static int ni_atmio_attach(struct comedi_device *dev,
 		return -EIO;
 
 	dev->board_ptr = ni_boards + board;
-	boardtype = comedi_board(dev);
+	boardtype = dev->board_ptr;
 	dev->board_name = boardtype->name;
 
 	/* irq stuff */

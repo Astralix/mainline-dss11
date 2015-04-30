@@ -69,7 +69,7 @@ typedef struct				  /* per scheduler state */
 	int			kss_nconns;
 	struct ksock_sched_info	*kss_info;	/* owner of it */
 	struct page		*kss_rx_scratch_pgs[LNET_MAX_IOV];
-	struct iovec		kss_scratch_iov[LNET_MAX_IOV];
+	struct kvec		kss_scratch_iov[LNET_MAX_IOV];
 } ksock_sched_t;
 
 struct ksock_sched_info {
@@ -93,8 +93,7 @@ typedef struct				  /* in-use interface */
 	char		ksni_name[IFNAMSIZ];	/* interface name */
 } ksock_interface_t;
 
-typedef struct
-{
+typedef struct {
 	/* "stuck" socket timeout (seconds) */
 	int	      *ksnd_timeout;
 	/* # scheduler threads in each pool while starting */
@@ -126,8 +125,7 @@ typedef struct
 	int	      *ksnd_zc_recv_min_nfrags; /* minimum # of fragments to enable ZC receive */
 } ksock_tunables_t;
 
-typedef struct
-{
+typedef struct {
 	__u64		  ksnn_incarnation;	/* my epoch */
 	spinlock_t	  ksnn_lock;		/* serialise */
 	struct list_head	  ksnn_list;		/* chain on global list */
@@ -142,8 +140,7 @@ typedef struct
 /** reserved thread for accepting & creating new connd */
 #define SOCKNAL_CONND_RESV     1
 
-typedef struct
-{
+typedef struct {
 	int			ksnd_init;	/* initialisation state */
 	int			ksnd_nnets;	/* # networks set up */
 	struct list_head		ksnd_nets;	/* list of nets */
@@ -216,7 +213,7 @@ typedef struct				  /* transmit packet */
 	int	    tx_nob;	 /* # packet bytes */
 	int	    tx_resid;       /* residual bytes */
 	int	    tx_niov;	/* # packet iovec frags */
-	struct iovec  *tx_iov;	 /* packet iovec frags */
+	struct kvec  *tx_iov;	 /* packet iovec frags */
 	int	    tx_nkiov;       /* # packet page frags */
 	unsigned short tx_zc_aborted;  /* aborted ZC request */
 	unsigned short tx_zc_capable:1; /* payload is large enough for ZC */
@@ -230,11 +227,11 @@ typedef struct				  /* transmit packet */
 	int	    tx_desc_size;   /* size of this descriptor */
 	union {
 		struct {
-			struct iovec iov;       /* virt hdr */
+			struct kvec iov;       /* virt hdr */
 			lnet_kiov_t  kiov[0];   /* paged payload */
 		}		  paged;
 		struct {
-			struct iovec iov[1];    /* virt hdr + payload */
+			struct kvec iov[1];    /* virt hdr + payload */
 		}		  virt;
 	}		       tx_frags;
 } ksock_tx_t;
@@ -246,7 +243,7 @@ typedef struct				  /* transmit packet */
 /* space for the rx frag descriptors; we either read a single contiguous
  * header, or up to LNET_MAX_IOV frags of payload of either type. */
 typedef union {
-	struct iovec     iov[LNET_MAX_IOV];
+	struct kvec      iov[LNET_MAX_IOV];
 	lnet_kiov_t      kiov[LNET_MAX_IOV];
 } ksock_rxiovspace_t;
 
@@ -257,8 +254,7 @@ typedef union {
 #define SOCKNAL_RX_LNET_PAYLOAD 5	       /* reading lnet payload (to deliver here) */
 #define SOCKNAL_RX_SLOP	 6	       /* skipping body */
 
-typedef struct ksock_conn
-{
+typedef struct ksock_conn {
 	struct ksock_peer  *ksnc_peer;	 /* owning peer */
 	struct ksock_route *ksnc_route;	/* owning route */
 	struct list_head	  ksnc_list;	 /* stash on peer's conn list */
@@ -288,7 +284,7 @@ typedef struct ksock_conn
 	int		   ksnc_rx_nob_left; /* # bytes to next hdr/body */
 	int		   ksnc_rx_nob_wanted; /* bytes actually wanted */
 	int		   ksnc_rx_niov;     /* # iovec frags */
-	struct iovec	 *ksnc_rx_iov;      /* the iovec frags */
+	struct kvec 	 *ksnc_rx_iov;      /* the iovec frags */
 	int		   ksnc_rx_nkiov;    /* # page frags */
 	lnet_kiov_t	  *ksnc_rx_kiov;     /* the page frags */
 	ksock_rxiovspace_t    ksnc_rx_iov_space;/* space for frag descriptors */
@@ -313,8 +309,7 @@ typedef struct ksock_conn
 	unsigned long	    ksnc_tx_last_post;  /* time stamp of the last posted TX */
 } ksock_conn_t;
 
-typedef struct ksock_route
-{
+typedef struct ksock_route {
 	struct list_head	    ksnr_list;	/* chain on peer route list */
 	struct list_head	    ksnr_connd_list;  /* chain on ksnr_connd_routes */
 	struct ksock_peer    *ksnr_peer;	/* owning peer */
@@ -334,8 +329,7 @@ typedef struct ksock_route
 
 #define SOCKNAL_KEEPALIVE_PING	  1       /* cookie for keepalive ping */
 
-typedef struct ksock_peer
-{
+typedef struct ksock_peer {
 	struct list_head	    ksnp_list;	/* stash on global peer list */
 	unsigned long	    ksnp_last_alive;  /* when (in jiffies) I was last alive */
 	lnet_process_id_t     ksnp_id;       /* who's on the other end(s) */
@@ -358,8 +352,7 @@ typedef struct ksock_peer
 	__u32		 ksnp_passive_ips[LNET_MAX_INTERFACES]; /* preferred local interfaces */
 } ksock_peer_t;
 
-typedef struct ksock_connreq
-{
+typedef struct ksock_connreq {
 	struct list_head	    ksncr_list;     /* stash on ksnd_connd_connreqs */
 	lnet_ni_t	    *ksncr_ni;       /* chosen NI */
 	struct socket	 *ksncr_sock;     /* accepted socket */
@@ -372,8 +365,7 @@ extern ksock_tunables_t ksocknal_tunables;
 #define SOCKNAL_MATCH_YES       1	/* TX matches type of connection */
 #define SOCKNAL_MATCH_MAY       2	/* TX can be sent on the connection, but not preferred */
 
-typedef struct ksock_proto
-{
+typedef struct ksock_proto {
 	int	   pro_version;					      /* version number of protocol */
 	int	 (*pro_send_hello)(ksock_conn_t *, ksock_hello_msg_t *);     /* handshake function */
 	int	 (*pro_recv_hello)(ksock_conn_t *, ksock_hello_msg_t *, int);/* handshake function */
@@ -525,7 +517,7 @@ int ksocknal_ctl(lnet_ni_t *ni, unsigned int cmd, void *arg);
 int ksocknal_send (lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg);
 int ksocknal_recv(lnet_ni_t *ni, void *private, lnet_msg_t *lntmsg,
 		  int delayed, unsigned int niov,
-		  struct iovec *iov, lnet_kiov_t *kiov,
+		  struct kvec *iov, lnet_kiov_t *kiov,
 		  unsigned int offset, unsigned int mlen, unsigned int rlen);
 int ksocknal_accept(lnet_ni_t *ni, struct socket *sock);
 

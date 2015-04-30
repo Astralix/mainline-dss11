@@ -107,7 +107,7 @@ static int io;
 static int irq;
 static bool iommap;
 static int ioshift;
-static bool softcarrier = 1;
+static bool softcarrier = true;
 static bool share_irq;
 static bool debug;
 static int sense = -1;	/* -1 = auto, 0 = active high, 1 = active low */
@@ -266,7 +266,7 @@ static unsigned long space_width;
 /* fetch serial input packet (1 byte) from register offset */
 static u8 sinp(int offset)
 {
-	if (iommap != 0)
+	if (iommap)
 		/* the register is memory-mapped */
 		offset <<= ioshift;
 
@@ -276,7 +276,7 @@ static u8 sinp(int offset)
 /* write serial output packet (1 byte) of value to register offset */
 static void soutp(int offset, u8 value)
 {
-	if (iommap != 0)
+	if (iommap)
 		/* the register is memory-mapped */
 		offset <<= ioshift;
 
@@ -496,6 +496,7 @@ static long send_pulse_homebrew_softcarrier(unsigned long length)
 {
 	int flag;
 	unsigned long actual, target, d;
+
 	length <<= 8;
 
 	actual = 0; target = 0; flag = 0;
@@ -528,11 +529,10 @@ static long send_pulse_homebrew(unsigned long length)
 
 	if (softcarrier)
 		return send_pulse_homebrew_softcarrier(length);
-	else {
-		on();
-		safe_udelay(length);
-		return 0;
-	}
+
+	on();
+	safe_udelay(length);
+	return 0;
 }
 
 static void send_space_irdeo(long length)
@@ -799,10 +799,10 @@ static int lirc_serial_probe(struct platform_device *dev)
 	 * For memory mapped I/O you *might* need to use ioremap() first,
 	 * for the NSLU2 it's done in boot code.
 	 */
-	if (((iommap != 0)
+	if (((iommap)
 	     && (devm_request_mem_region(&dev->dev, iommap, 8 << ioshift,
 					 LIRC_DRIVER_NAME) == NULL))
-	   || ((iommap == 0)
+	   || ((!iommap)
 	       && (devm_request_region(&dev->dev, io, 8,
 				       LIRC_DRIVER_NAME) == NULL))) {
 		dev_err(&dev->dev, "port %04x already in use\n", io);
@@ -948,7 +948,6 @@ static long lirc_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 	case LIRC_GET_LENGTH:
 		return -ENOIOCTLCMD;
-		break;
 
 	case LIRC_SET_SEND_DUTY_CYCLE:
 		dprintk("SET_SEND_DUTY_CYCLE\n");
@@ -961,7 +960,6 @@ static long lirc_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		if (value <= 0 || value > 100)
 			return -EINVAL;
 		return init_timing_params(value, freq);
-		break;
 
 	case LIRC_SET_SEND_CARRIER:
 		dprintk("SET_SEND_CARRIER\n");
@@ -974,7 +972,6 @@ static long lirc_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		if (value > 500000 || value < 20000)
 			return -EINVAL;
 		return init_timing_params(duty_cycle, value);
-		break;
 
 	default:
 		return lirc_dev_fop_ioctl(filep, cmd, arg);
@@ -1063,7 +1060,6 @@ static struct platform_driver lirc_serial_driver = {
 	.resume		= lirc_serial_resume,
 	.driver		= {
 		.name	= "lirc_serial",
-		.owner	= THIS_MODULE,
 	},
 };
 

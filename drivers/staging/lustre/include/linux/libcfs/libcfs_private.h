@@ -453,19 +453,10 @@ int	 cfs_match_nid(lnet_nid_t nid, struct list_head *list);
  * Support for temporary event tracing with minimal Heisenberg effect.
  * -------------------------------------------------------------------- */
 
-struct libcfs_device_userstate
-{
+struct libcfs_device_userstate {
 	int	   ldu_memhog_pages;
 	struct page   *ldu_memhog_root_page;
 };
-
-/* what used to be in portals_lib.h */
-#ifndef MIN
-# define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-#ifndef MAX
-# define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#endif
 
 #define MKSTR(ptr) ((ptr)) ? (ptr) : ""
 
